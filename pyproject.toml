@@ -1,0 +1,45 @@
+[tool.poetry]
+name = "ai"
+version = "0.1.0"
+description = "A microservice that handles interactions with llms."
+authors = []
+readme = "README.md"
+packages = [{include = "src"}]
+
+[tool.poetry.dependencies]
+python = "^3.12.7"
+langchain-core = "0.3.74"
+langchain-google-vertexai = "2.0.28"
+google-cloud-aiplatform = "1.110.0"
+langsmith = "0.3.45"
+pydantic = "2.9.2"
+python-json-logger = "2.0.7"
+requests = "2.32.3"
+pillow = "^11.2.1"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.3.3"
+pytest-mock = "^3.14.0"
+boto3 = "1.35.60"
+datadog-lambda = "6.99.0"  # Compatibility issues often occur with ddtrace, so we use a specific version. If you update this, you may need to update ddtrace as well. Look at the datadog-lambda release notes on Github for more information.
+ddtrace = "2.14.1"  # Compatibility issues often occur with datadog-lambda, so we use a specific version.
+ruff = "^0.6.9"
+mypy = "^1.13.0"
+types-requests = "^2.32.0.20241016"
+
+[tool.poetry.group.evaluation.dependencies]
+beautifulsoup4 = "^4.12.3"
+
+[tool.poetry.scripts]
+eval-bucket = "src.shared.dataset_cli:main"
+
+[tool.ruff]
+lint.extend-select = ["I"]  # Extend linting to include imports sorting.
+
+[tool.mypy]
+ignore_missing_imports = true  # Avoid raising an error when mypy can't scan an external package's typing.
+plugins = ['pydantic.mypy']
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
