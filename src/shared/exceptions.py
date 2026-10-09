@@ -1,14 +1,9 @@
-from typing import Optional
-
-
 class FriendlyException(Exception):
     """Exception that is caught and handled gracefully.
 
     Used to provide a user-friendly error message.
     A FriendlyException is logged as a warning and does not trigger a retry.
     """
-
-    pass
 
 
 class LlmRaisedException(FriendlyException):
@@ -20,7 +15,7 @@ class LlmRaisedException(FriendlyException):
     def __init__(
         self,
         message: str,
-        llm_generated_message: Optional[str] = None,
+        llm_generated_message: str | None = None,
     ):
         self.message = message
         self.llm_generated_message = llm_generated_message

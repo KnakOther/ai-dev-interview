@@ -1,4 +1,4 @@
-from langsmith.schemas import Example, Run
+from langsmith.schemas import Run
 
 from src.agents.extract_entities.extract_entities_agent import ExtractEntitiesAgent
 from src.datasets.documents_with_entities import DocumentsWithEntitiesDataset
@@ -28,22 +28,22 @@ class ExtractEntitiesLimitedTypesEvaluation(Evaluation):
         self.evaluators = [did_not_raise_error_evaluator, has_valid_structure_evaluator]
 
 
-def did_not_raise_error_evaluator(run: Run, example: Example) -> dict:
-    if not run.outputs:
+def did_not_raise_error_evaluator(run: Run, outputs: dict) -> dict:
+    if not outputs:
         raise EvaluationError("The evaluation run did not provide a model output.")
 
     score = 0 if run.error else 1
     return {"key": "did not raise error", "score": score}
 
 
-def has_valid_structure_evaluator(run: Run, example: Example) -> dict:
-    if not run.outputs:
+def has_valid_structure_evaluator(run: Run, outputs: dict) -> dict:
+    if not outputs:
         raise EvaluationError("The evaluation run did not provide a model output.")
 
     if run.error:
         return {"key": "has valid structure", "score": 0}
 
-    output = run.outputs.get("output", {})
+    output = outputs.get("output", {})
     required_fields = ["people", "organizations", "locations", "dates", "key_terms"]
 
     all_fields_present = all(field in output for field in required_fields)
@@ -55,20 +55,22 @@ def has_valid_structure_evaluator(run: Run, example: Example) -> dict:
     return {"key": "has valid structure", "score": score}
 
 
-def found_expected_entities_evaluator(run: Run, example: Example) -> dict:
-    if not run.outputs:
+def found_expected_entities_evaluator(
+    run: Run, outputs: dict, reference_outputs: dict
+) -> dict:
+    if not outputs:
         raise EvaluationError("The evaluation run did not provide a model output.")
 
     if run.error:
         return {"key": "found expected entities", "score": 0}
 
     # Check if expected entities (from metadata) were found
-    expected = example.outputs.get("expected_entities", {})
+    expected = reference_outputs.get("expected_entities", {})
     if not expected:
         # No expected entities defined, skip this evaluator
         return {"key": "found expected entities", "score": 1}
 
-    output = run.outputs.get("output", {})
+    output = outputs.get("output", {})
     found_count = 0
     total_count = 0
 
@@ -77,9 +79,7 @@ def found_expected_entities_evaluator(run: Run, example: Example) -> dict:
         for expected_entity in expected_list:
             total_count += 1
             # Case-insensitive partial match
-            if any(
-                expected_entity.lower() in actual.lower() for actual in actual_list
-            ):
+            if any(expected_entity.lower() in actual.lower() for actual in actual_list):
                 found_count += 1
 
     score = found_count / total_count if total_count > 0 else 1

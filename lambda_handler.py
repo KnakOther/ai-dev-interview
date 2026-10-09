@@ -8,6 +8,7 @@ sys.path.insert(1, "/tmp/")
 
 
 from src.handlers import (
+    brief_documents_handler,
     classify_document_handler,
     extract_entities_handler,
     summarize_document_handler,
@@ -24,3 +25,7 @@ def extract_entities_lambda_handler(event, context):
 
 def classify_document_lambda_handler(event, context):
     return classify_document_handler.handle(event, context)
+
+
+def brief_documents_lambda_handler(event, context):
+    return brief_documents_handler.handle(event, context)

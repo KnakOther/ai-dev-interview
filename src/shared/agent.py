@@ -1,10 +1,10 @@
 import time
 from abc import ABC, abstractmethod
 from dataclasses import asdict, dataclass
-from typing import Any, Optional, Type
+from typing import Any
 
 from langchain_core.messages import AIMessage
-from langchain_core.messages.ai import UsageMetadata
+from langchain_core.messages.ai import UsageMetadata, add_usage
 from pydantic import BaseModel, ValidationError
 
 from src.shared.exceptions import FriendlyException
@@ -15,7 +15,7 @@ from src.shared.run_config import RunConfig
 @dataclass
 class AgentResponse:
     result: dict | str | list | BaseModel
-    execution_details: Optional[UsageMetadata] = None
+    execution_details: UsageMetadata | None = None
 
 
 class Agent(ABC):
@@ -36,13 +36,13 @@ class Agent(ABC):
 
     name: str
     model: str
-    input_schema: Optional[Type[BaseModel]] = None
+    input_schema: type[BaseModel] | None = None
 
     def run(
         self,
         input: Any,
-        conversation_history: Optional[list[dict]] = None,
-        thread_id: Optional[int | str] = None,
+        conversation_history: list[dict] | None = None,
+        thread_id: int | str | None = None,
         retries: int = 3,
         *args: Any,
         **kwargs: Any,
@@ -90,7 +90,7 @@ class Agent(ABC):
 
             _retries += 1
 
-        final_failure_message = f"{self.generic_failure_message}{" Retries exhausted." if retries > 0 else ""}"
+        final_failure_message = f"{self.generic_failure_message}{' Retries exhausted.' if retries > 0 else ''}"
 
         self._log_unsuccesful_generation(final_failure_message, _retries, run_config)
 
@@ -120,34 +120,35 @@ class Agent(ABC):
                 )
 
     @staticmethod
-    def unpack_llm_structured_output(
-        llm_structured_output: dict | BaseModel,
-    ) -> tuple[AIMessage, BaseModel]:
-        """Unpack Langchain response when using structured output and validate its typing."""
+    def unpack_agent_result(
+        agent_result: dict,
+    ) -> tuple[BaseModel, UsageMetadata | None]:
+        """Unpack a LangChain `create_agent` result when using `response_format` and validate its typing.
+
+        Returns the structured response and the token usage summed across every model call of the agent loop.
+        """
         if not isinstance(
-            llm_structured_output, dict
-        ):  # Since Langchain LLM invoke could return a BaseModel or a dict, we need to check if the output is a dict.
+            agent_result, dict
+        ):  # A compiled agent graph returns its final state as a dict.
             raise ValueError(
-                f"The Langchain result is {type(llm_structured_output)}. It should be a dict.",
+                f"The Langchain agent result is {type(agent_result)}. It should be a dict.",
             )
 
-        raw_output = llm_structured_output["raw"]
-        parsed_output = llm_structured_output["parsed"]
-
-        if not isinstance(
-            raw_output,
-            AIMessage,
-        ):  # To avoid receiving other types of BaseMessages.
-            raise ValueError(
-                f"The Langchain result of the raw output has type {type(raw_output)}. It should be an AIMessage.",
-            )
+        parsed_output = agent_result.get("structured_response")
 
         if not isinstance(parsed_output, BaseModel):
             raise ValueError(
-                f"The Langchain result of the parsed output has type {type(parsed_output)}. It should be a BaseModel.",
+                f"The Langchain agent structured response has type {type(parsed_output)}. It should be a BaseModel.",
                 0,
             )
-        return raw_output, parsed_output
+
+        usage_metadata: UsageMetadata | None = None
+
+        for message in agent_result.get("messages", []):
+            if isinstance(message, AIMessage) and message.usage_metadata:
+                usage_metadata = add_usage(usage_metadata, message.usage_metadata)
+
+        return parsed_output, usage_metadata
 
     @staticmethod
     def cast_llm_output_to_ai_message(llm_output: AIMessage | BaseModel) -> AIMessage:
@@ -188,8 +189,8 @@ class Agent(ABC):
         message: str,
         retries: int,
         run_config: RunConfig,
-        error: Optional[Exception] = None,
-        extra: Optional[dict] = None,
+        error: Exception | None = None,
+        extra: dict | None = None,
     ):
         logging_payload = {
             "retries": retries,

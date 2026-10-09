@@ -1,12 +1,12 @@
 import json
-from typing import Any, Dict
+from typing import Any
 
 from src.agents.classify_document.classify_document_agent import (
     ClassifyDocumentAgent,
 )
 from src.shared.exceptions import LlmRaisedException
 
-from .import (
+from . import (
     health_check_response,
     process_common_request,
     setup_handler,
@@ -14,7 +14,7 @@ from .import (
 )
 
 
-def handle(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
+def handle(event: dict[str, Any], context: Any) -> dict[str, Any]:
     """
     Lambda function to classify a document by category, type, and sentiment.
 

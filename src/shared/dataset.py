@@ -1,7 +1,7 @@
 import json
 import os
 from abc import ABC, abstractmethod
-from typing import Iterator, Optional
+from collections.abc import Iterator
 
 import boto3
 from langsmith import Client as LangsmithClient
@@ -31,7 +31,7 @@ class Dataset(ABC):
     name: str
     description: str
     entries: list[dict]
-    langsmith_api_key: Optional[str] = None
+    langsmith_api_key: str | None = None
 
     @abstractmethod
     def load_entries(self):
@@ -41,7 +41,6 @@ class Dataset(ABC):
         The entries must be a list of DatasetEntries.
         Once the `load_entries` method is implemented, the `Dataset` class can be used to create and seed the dataset.
         """
-        pass
 
     def create_and_seed(self) -> None:
         self.load_entries()
@@ -69,7 +68,10 @@ class Dataset(ABC):
     def _create_examples_in_batches(self, client: LangsmithClient) -> None:
         batches = self._split_entries_into_batches()
         for batch in batches:
-            client.create_examples(inputs=batch, dataset_name=self.name)
+            client.create_examples(
+                examples=[{"inputs": entry} for entry in batch],
+                dataset_name=self.name,
+            )
 
     def _split_entries_into_batches(self) -> list[list[dict]]:
         batches: list[list[dict]] = []
@@ -136,7 +138,7 @@ def get_bucket_name() -> str:
 
 def load_file_to_evaluation_bucket(
     local_file_path: str,
-    s3_key: Optional[str] = None,
+    s3_key: str | None = None,
     region_name: str = DEFAULT_REGION_NAME,
     profile_name: str = DEFAULT_PROFILE_NAME,
 ):
@@ -151,7 +153,7 @@ def load_file_to_evaluation_bucket(
 
 def download_file_from_evaluation_bucket(
     s3_key: str,
-    local_file_path: Optional[str] = None,
+    local_file_path: str | None = None,
     region_name: str = DEFAULT_REGION_NAME,
     profile_name: str = DEFAULT_PROFILE_NAME,
 ):
@@ -178,7 +180,7 @@ def delete_file_in_evaluation_bucket(
 
 
 def load_directory_to_evaluation_bucket(
-    local_directory: str, s3_directory: Optional[str] = None
+    local_directory: str, s3_directory: str | None = None
 ):
     upload_directory_to_s3(
         s3_client=boto3.client("s3"),
@@ -189,7 +191,7 @@ def load_directory_to_evaluation_bucket(
 
 
 def download_directory_from_evaluation_bucket(
-    s3_directory: str, local_directory: Optional[str] = None
+    s3_directory: str, local_directory: str | None = None
 ):
     download_directory_from_s3(
         s3_client=boto3.client("s3"),

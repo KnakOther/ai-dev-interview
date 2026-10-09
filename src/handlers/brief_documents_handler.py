@@ -1,9 +1,7 @@
 import json
 from typing import Any
 
-from src.agents.summarize_document.summarize_document_agent import (
-    SummarizeDocumentAgent,
-)
+from src.agents.brief_documents.brief_documents_agent import BriefDocumentsAgent
 from src.shared.exceptions import LlmRaisedException
 
 from . import (
@@ -16,15 +14,16 @@ from . import (
 
 def handle(event: dict[str, Any], context: Any) -> dict[str, Any]:
     """
-    Lambda function to process a document and generate a summary.
+    Lambda function to write an executive briefing from a collection of documents.
 
     **Expected Event Structure:**
 
     ```json
     {
-      "document_text": "String containing the document text to summarize",
-      "max_length": 200,
-      "language": "English"
+      "documents": [{"title": "Q3 report", "text": "..."}, {"title": "Board memo", "text": "..."}],
+      "objective": "Write an executive briefing of the documents.",
+      "language": "English",
+      "max_summary_length": 250
     }
     ```
 
@@ -35,26 +34,28 @@ def handle(event: dict[str, Any], context: Any) -> dict[str, Any]:
       "statusCode": 200,
       "headers": {"Content-Type": "application/json"},
       "body": {
-            "summary": "Concise document summary",
-            "key_points": ["Point 1", "Point 2", "Point 3"],
-            "word_count": 150,
+            "executive_summary": "...",
+            "documents": [{"path": "/documents/q3-report.md", "summary": "...", "primary_category": "Finance", "key_entities": ["..."]}],
+            "cross_document_themes": ["..."],
+            "contradictions": ["..."],
+            "open_questions": ["..."],
             "execution_details": {
-                "prompt_tokens": 123,
-                "completion_tokens": 456,
+                "input_tokens": 123,
+                "output_tokens": 456,
                 "total_tokens": 579
             }
         }
     }
     ```
     """
-    agent = SummarizeDocumentAgent()
+    agent = BriefDocumentsAgent()
     setup_handler(agent.name, event)
 
     # Process request
     data, error = process_common_request(
         event,
-        required_fields=["document_text"],
-        optional_fields=["max_length", "language"],
+        required_fields=["documents"],
+        optional_fields=["objective", "language", "max_summary_length"],
     )
 
     if error:
@@ -62,19 +63,9 @@ def handle(event: dict[str, Any], context: Any) -> dict[str, Any]:
     if data.get("health_check"):
         return health_check_response()
 
-    # Set defaults
-    data["max_length"] = data.get("max_length", 200)
-    data["language"] = data.get("language", "English")
-
-    # Run agent
+    # Run agent. Deep agent runs are long and expensive: a single attempt, the agent recovers from its own errors.
     try:
-        out = agent.run(
-            input={
-                "document_text": data["document_text"],
-                "max_length": data["max_length"],
-                "language": data["language"],
-            }
-        )
+        out = agent.run(input=data, retries=1)
         return success_response(out)
     except LlmRaisedException as e:
         return {

@@ -1,13 +1,12 @@
 import os
 import sys
 from pathlib import Path
-from typing import Optional
 
 import boto3
 from botocore.client import BaseClient
 
 from src import DEFAULT_PROFILE_NAME, DEFAULT_REGION_NAME
-from src.shared.constants import GEMINI_FLASH_2_5
+from src.shared.constants import GEMINI_3_5_FLASH
 
 
 def runs_in_debug_mode() -> bool:
@@ -129,7 +128,7 @@ def upload_directory_to_s3(
 
 
 def setup_gcp_credentials(
-    region_name=DEFAULT_REGION_NAME, profile_name: Optional[str] = None
+    region_name=DEFAULT_REGION_NAME, profile_name: str | None = None
 ):
     """Sets up Google Cloud credentials in the environment, pulling from the AWS Secrets Manager."""
     if profile_name:
@@ -205,4 +204,4 @@ def get_file_content_from_s3(
 
 def select_model() -> str:
     """Returns the default model for document processing tasks."""
-    return GEMINI_FLASH_2_5
+    return GEMINI_3_5_FLASH

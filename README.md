@@ -1,12 +1,20 @@
 # Document Intelligence AI Microservice
 
-This microservice provides AI-powered document analysis capabilities including summarization, entity extraction, and classification.
+This microservice provides AI-powered document analysis capabilities including summarization, entity extraction, classification, and multi-document briefings.
 
 ## Features
 
 - **Document Summarization**: Generate concise summaries with key points extraction
 - **Entity Extraction**: Identify people, organizations, locations, dates, and key terms
 - **Document Classification**: Categorize documents by topic, type, and sentiment
+- **Document Briefing (deep agent)**: Plan, analyze and fact-check a collection of documents to write an executive briefing
+
+## Stack
+
+- [LangChain 1.x](https://docs.langchain.com/oss/python/langchain/overview): agents are built with `create_agent`, with structured outputs via `response_format` and behaviors via middleware.
+- [Deep Agents](https://docs.langchain.com/oss/python/deepagents/overview): the briefing agent is built with `create_deep_agent` (planning, virtual filesystem, subagents).
+- [Gemini](https://ai.google.dev/gemini-api/docs/models) on Vertex AI through `langchain-google-genai` (`ChatGoogleGenerativeAI(vertexai=True)`). Default models: `gemini-3.5-flash` and `gemini-3.1-pro-preview`.
+- [LangSmith](https://docs.langchain.com/langsmith/evaluation) for tracing, datasets and evaluations.
 
 ## Development Environment Setup
 
@@ -43,6 +51,9 @@ cp .env.dist .env
 Fill in the values with your own secrets.
 
 Note: Any variables defined in devcontainer.json under containerEnv will override values in your .env file.
+
+The Gemini models are called through Vertex AI. Set `GOOGLE_CLOUD_PROJECT` and `GOOGLE_CLOUD_LOCATION` (e.g. `global`), and authenticate with
+`gcloud auth application-default login` or a service account (`GOOGLE_APPLICATION_CREDENTIALS`).
 
 ### 4. Open the project from the Dev Container
 
@@ -143,6 +154,39 @@ Classifies documents by category, type, and sentiment.
 - `confidence_score` (float): Confidence score between 0 and 1
 - `sentiment` (str): Overall sentiment (positive, negative, neutral, mixed)
 - `document_type` (str): Type of document (article, report, email, etc.)
+
+### Brief Documents Deep Agent
+
+Writes an executive briefing from a collection of documents. The agent:
+
+1. Plans its work with a to-do list (`write_todos`).
+2. Reads the documents from a virtual, in-memory filesystem (`/documents/*.md`).
+3. Calls the summarize, extract entities and classify agents as tools.
+4. Writes a draft in `/drafts/brief.md` and delegates its review to a `fact-checker` subagent.
+5. Returns a structured briefing.
+
+**Input:**
+- `documents` (list[dict]): 1-20 documents, each with a `title` (str) and a `text` (str)
+- `objective` (str, optional): What the briefing should focus on
+- `language` (str, optional): Output language (default: "English")
+- `max_summary_length` (int, optional): Maximum length of the executive summary in words (default: 250)
+
+**Output:**
+- `executive_summary` (str): Summary of the whole collection
+- `documents` (list[dict]): One finding per document (`path`, `summary`, `primary_category`, `key_entities`)
+- `cross_document_themes` (list[str]): Themes shared by several documents
+- `contradictions` (list[str]): Facts or figures that contradict each other across documents
+- `open_questions` (list[str]): Questions the documents raise but do not answer
+
+## Evaluations
+
+Each agent has an `*_evaluation.py` module that runs a LangSmith experiment against a dataset stored in LangSmith:
+
+```bash
+python -m src.agents.summarize_document.summarize_document_evaluation
+```
+
+Datasets are seeded from JSON files in the evaluation S3 bucket (see `src/datasets`).
 
 ## Testing Example
 

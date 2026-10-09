@@ -1,2 +1,3 @@
-GEMINI_PRO_2_5 = "gemini-2.5-pro"
-GEMINI_FLASH_2_5 = "gemini-2.5-flash"
+GEMINI_3_5_FLASH = "gemini-3.5-flash"
+GEMINI_3_5_FLASH_LITE = "gemini-3.5-flash-lite"
+GEMINI_3_1_PRO = "gemini-3.1-pro-preview"
