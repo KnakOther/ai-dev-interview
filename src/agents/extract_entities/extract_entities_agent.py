@@ -1,11 +1,13 @@
-from typing import Any
+from typing import Any, cast
 
-from langchain_google_vertexai import ChatVertexAI
+from langchain.agents import create_agent
+from langchain.agents.middleware import InputAgentState
+from langchain.agents.structured_output import ProviderStrategy
 from pydantic import BaseModel, Field
 
 from src.agents.extract_entities.extract_entities_prompt import prompt_template
 from src.shared.agent import Agent, AgentResponse
-from src.shared.gemini import GEMINI_CONFIG
+from src.shared.gemini import get_chat_model
 
 
 class ExtractedEntities(BaseModel):
@@ -27,14 +29,20 @@ class ExtractedEntities(BaseModel):
 class ExtractEntitiesAgentInput(BaseModel):
     document_text: str
     entity_types: list[str] = Field(
-        default_factory=lambda: ["people", "organizations", "locations", "dates", "key_terms"]
+        default_factory=lambda: [
+            "people",
+            "organizations",
+            "locations",
+            "dates",
+            "key_terms",
+        ]
     )
 
 
 class ExtractEntitiesAgent(Agent):
     def __init__(self) -> None:
         self.name = "Extract entities agent"
-        self.model = "gemini-2.5-flash"
+        self.model = "gemini-3.5-flash"
         self.input_schema = ExtractEntitiesAgentInput
 
     def generate_response(
@@ -43,8 +51,11 @@ class ExtractEntitiesAgent(Agent):
         *args: Any,
         **kwargs: Any,
     ) -> AgentResponse:
-        chat = ChatVertexAI(model=self.model, **GEMINI_CONFIG).with_structured_output(
-            schema=ExtractedEntities, include_raw=True
+        agent = create_agent(
+            model=get_chat_model(self.model),
+            tools=[],
+            response_format=ProviderStrategy(schema=ExtractedEntities),
+            name="extract_entities",
         )
         _input = input.copy()
 
@@ -57,13 +68,18 @@ class ExtractEntitiesAgent(Agent):
                 "key_terms",
             ]
 
-        llm_output = (prompt_template | chat).invoke(_input)
+        agent_result = agent.invoke(
+            cast(
+                InputAgentState,
+                {"messages": prompt_template.format_messages(**_input)},
+            )
+        )
 
-        raw_output, parsed_output = self.unpack_llm_structured_output(llm_output)
+        parsed_output, usage_metadata = self.unpack_agent_result(agent_result)
 
         if not isinstance(parsed_output, ExtractedEntities):
             raise ValueError(
                 f"Wrong structured output type. Expected {ExtractedEntities}. Got {type(parsed_output)} instead."
             )
 
-        return AgentResponse(parsed_output.model_dump(), raw_output.usage_metadata)
+        return AgentResponse(parsed_output.model_dump(), usage_metadata)

@@ -7,25 +7,26 @@ readme = "README.md"
 packages = [{include = "src"}]
 
 [tool.poetry.dependencies]
-python = "^3.12.7"
-langchain-core = "0.3.74"
-langchain-google-vertexai = "2.0.28"
-google-cloud-aiplatform = "1.110.0"
-langsmith = "0.3.45"
-pydantic = "2.9.2"
-python-json-logger = "2.0.7"
-requests = "2.32.3"
-pillow = "^11.2.1"
+python = ">=3.12,<4.0"
+langchain = "1.4.3"
+langchain-core = "1.6.8"
+langchain-google-genai = "4.4.0"  # Replaces langchain-google-vertexai (ChatVertexAI is deprecated). Use `vertexai=True` to target Vertex AI.
+langgraph = "1.2.14"
+deepagents = "0.7.23"
+langsmith = "0.14.4"
+pydantic = "2.14.0"
+python-json-logger = "4.2.0"
+requests = "2.34.2"
 
 [tool.poetry.group.dev.dependencies]
-pytest = "^8.3.3"
-pytest-mock = "^3.14.0"
-boto3 = "1.35.60"
+pytest = "^9.1.1"
+pytest-mock = "^3.16.0"
+boto3 = "1.43.109"
 datadog-lambda = "6.99.0"  # Compatibility issues often occur with ddtrace, so we use a specific version. If you update this, you may need to update ddtrace as well. Look at the datadog-lambda release notes on Github for more information.
 ddtrace = "2.14.1"  # Compatibility issues often occur with datadog-lambda, so we use a specific version.
-ruff = "^0.6.9"
-mypy = "^1.13.0"
-types-requests = "^2.32.0.20241016"
+ruff = "^0.16.10"
+mypy = "^2.4.0"
+types-requests = "^2.32.4"
 
 [tool.poetry.group.evaluation.dependencies]
 beautifulsoup4 = "^4.12.3"
@@ -34,7 +35,7 @@ beautifulsoup4 = "^4.12.3"
 eval-bucket = "src.shared.dataset_cli:main"
 
 [tool.ruff]
-lint.extend-select = ["I"]  # Extend linting to include imports sorting.
+lint.select = ["E4", "E7", "E9", "F", "I", "UP"]  # Ruff defaults, plus imports sorting and pyupgrade (modern typing syntax).
 
 [tool.mypy]
 ignore_missing_imports = true  # Avoid raising an error when mypy can't scan an external package's typing.

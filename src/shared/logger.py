@@ -1,12 +1,12 @@
 import logging
 
-from pythonjsonlogger import jsonlogger
+from pythonjsonlogger.json import JsonFormatter
 
 # Set up logging
 logger = logging.getLogger(name=__name__)
 
 logHandler = logging.StreamHandler()
-formatter = jsonlogger.JsonFormatter()  # Preferred format by Datadog
+formatter = JsonFormatter()  # Preferred format by Datadog
 logHandler.setFormatter(formatter)
 logger.addHandler(logHandler)
 

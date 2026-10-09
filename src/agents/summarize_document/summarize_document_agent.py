@@ -1,11 +1,13 @@
-from typing import Any
+from typing import Any, cast
 
-from langchain_google_vertexai import ChatVertexAI
+from langchain.agents import create_agent
+from langchain.agents.middleware import InputAgentState
+from langchain.agents.structured_output import ProviderStrategy
 from pydantic import BaseModel, Field
 
 from src.agents.summarize_document.summarize_document_prompt import prompt_template
 from src.shared.agent import Agent, AgentResponse
-from src.shared.gemini import GEMINI_CONFIG
+from src.shared.gemini import get_chat_model
 
 
 class DocumentSummary(BaseModel):
@@ -25,7 +27,7 @@ class SummarizeDocumentAgentInput(BaseModel):
 class SummarizeDocumentAgent(Agent):
     def __init__(self) -> None:
         self.name = "Summarize document agent"
-        self.model = "gemini-2.5-flash"
+        self.model = "gemini-3.5-flash"
         self.input_schema = SummarizeDocumentAgentInput
 
     def generate_response(
@@ -34,8 +36,11 @@ class SummarizeDocumentAgent(Agent):
         *args: Any,
         **kwargs: Any,
     ) -> AgentResponse:
-        chat = ChatVertexAI(model=self.model, **GEMINI_CONFIG).with_structured_output(
-            schema=DocumentSummary, include_raw=True
+        agent = create_agent(
+            model=get_chat_model(self.model),
+            tools=[],
+            response_format=ProviderStrategy(schema=DocumentSummary),
+            name="summarize_document",
         )
         _input = input.copy()
 
@@ -45,9 +50,14 @@ class SummarizeDocumentAgent(Agent):
         if not _input.get("max_length"):
             _input["max_length"] = 200
 
-        llm_output = (prompt_template | chat).invoke(_input)
+        agent_result = agent.invoke(
+            cast(
+                InputAgentState,
+                {"messages": prompt_template.format_messages(**_input)},
+            )
+        )
 
-        raw_output, parsed_output = self.unpack_llm_structured_output(llm_output)
+        parsed_output, usage_metadata = self.unpack_agent_result(agent_result)
 
         if not isinstance(parsed_output, DocumentSummary):
             raise ValueError(
@@ -57,4 +67,4 @@ class SummarizeDocumentAgent(Agent):
         if len(parsed_output.summary) == 0:
             raise ValueError("Generated summary is empty.")
 
-        return AgentResponse(parsed_output.model_dump(), raw_output.usage_metadata)
+        return AgentResponse(parsed_output.model_dump(), usage_metadata)

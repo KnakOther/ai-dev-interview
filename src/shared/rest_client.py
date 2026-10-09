@@ -1,5 +1,5 @@
 import json
-from typing import Any, Dict, Optional
+from typing import Any
 
 import requests
 from requests.exceptions import ConnectionError, RequestException, Timeout
@@ -9,7 +9,7 @@ class RestClient:
     """A client for making REST API calls via POST requests."""
 
     def __init__(
-        self, base_url: str, timeout: int = 30, headers: Optional[Dict[str, str]] = None
+        self, base_url: str, timeout: int = 30, headers: dict[str, str] | None = None
     ):
         self.base_url = base_url.rstrip("/")
         self.timeout = timeout
@@ -20,9 +20,9 @@ class RestClient:
     def post(
         self,
         endpoint: str,
-        data: Optional[Dict[str, Any]] = None,
-        headers: Optional[Dict[str, str]] = None,
-    ) -> Dict[str, Any]:
+        data: dict[str, Any] | None = None,
+        headers: dict[str, str] | None = None,
+    ) -> dict[str, Any]:
         """
         Make a POST request to the specified endpoint.
 
@@ -51,6 +51,6 @@ class RestClient:
             return response.json()
 
         except (ConnectionError, Timeout) as e:
-            raise RequestException(f"Network error calling {url}: {str(e)}")
+            raise RequestException(f"Network error calling {url}: {e!s}")
         except json.JSONDecodeError as e:
-            raise ValueError(f"Invalid JSON response from {url}: {str(e)}")
+            raise ValueError(f"Invalid JSON response from {url}: {e!s}")

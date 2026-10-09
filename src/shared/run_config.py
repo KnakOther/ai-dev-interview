@@ -1,5 +1,5 @@
 import json
-from typing import Any, Optional
+from typing import Any
 
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
 
@@ -10,13 +10,13 @@ from src.shared.role import Role
 class RunConfig:
     input: Any
     conversation_history: list[BaseMessage]
-    thread_id: Optional[int | str]
+    thread_id: int | str | None
 
     def __init__(
         self,
         input: Any,
-        conversation_history: Optional[list[dict]],
-        thread_id: Optional[int | str] = None,
+        conversation_history: list[dict] | None,
+        thread_id: int | str | None = None,
     ):
         self.input = input
 

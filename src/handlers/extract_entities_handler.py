@@ -1,5 +1,5 @@
 import json
-from typing import Any, Dict
+from typing import Any
 
 from src.agents.extract_entities.extract_entities_agent import ExtractEntitiesAgent
 from src.shared.exceptions import LlmRaisedException
@@ -12,7 +12,7 @@ from . import (
 )
 
 
-def handle(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
+def handle(event: dict[str, Any], context: Any) -> dict[str, Any]:
     """
     Lambda function to extract named entities from a document.
 

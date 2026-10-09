@@ -4,7 +4,9 @@ from src.shared.dataset import Dataset
 class DocumentsForSummarizationDataset(Dataset):
     def __init__(self) -> None:
         self.name = "Documents for summarization"
-        self.description = "A collection of documents for testing summarization capabilities."
+        self.description = (
+            "A collection of documents for testing summarization capabilities."
+        )
         self.entries = []
 
     def load_entries(self):

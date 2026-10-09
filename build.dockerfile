@@ -1,6 +1,6 @@
 FROM python:3.12.7-bullseye
 
-RUN pip install poetry==1.8.5
+RUN pip install poetry==2.5.1
 RUN apt-get -y update
 RUN apt-get install -y python3-full
 

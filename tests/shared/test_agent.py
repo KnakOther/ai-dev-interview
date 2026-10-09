@@ -84,7 +84,9 @@ def test__run__friendly_exception_is_propagated(caplog, agent):
         name = "FriendlyExceptionAgent"
         model = "TestModel"
 
-        def generate_response(self, input: Any, *args: Any, **kwargs: Any) -> AgentResponse:
+        def generate_response(
+            self, input: Any, *args: Any, **kwargs: Any
+        ) -> AgentResponse:
             raise FriendlyException("User-friendly error message")
 
     caplog.set_level(logging.WARNING)
@@ -102,7 +104,9 @@ def test__run__llm_raised_exception_is_propagated(agent):
         name = "LlmExceptionAgent"
         model = "TestModel"
 
-        def generate_response(self, input: Any, *args: Any, **kwargs: Any) -> AgentResponse:
+        def generate_response(
+            self, input: Any, *args: Any, **kwargs: Any
+        ) -> AgentResponse:
             raise LlmRaisedException("LLM error message")
 
     with pytest.raises(LlmRaisedException) as exc_info:

@@ -1,13 +1,11 @@
 from abc import ABC
-from typing import Callable, Optional
+from collections.abc import Callable
 
 from langsmith import Client as LangsmithClient
-from langsmith.evaluation import LangChainStringEvaluator
-from langsmith.evaluation import evaluate as langsmith_evaluate
+from langsmith import evaluate as langsmith_evaluate
 
 from src.shared.agent import Agent
 from src.shared.dataset import Dataset
-from src.shared.logger import logger
 from src.shared.utils import get_langsmith_api_key, runs_in_debug_mode
 
 
@@ -19,17 +17,15 @@ class Evaluation(ABC):
     The evaluation run will generate one Langsmith evaluation by agent and dataset combination.
 
     Developing a new evaluation requires creating a subclass of this class and
-    defining it's attributes. The `evaluators` attribute is a list of functions that must receive
-    a Langsmith `Run` and `Evaluation` arguments and return a dictionary with at least a `score` key with
-    a numerical value.
+    defining it's attributes. The `evaluators` attribute is a list of functions that receive any of the
+    `inputs`, `outputs`, `reference_outputs`, `run` and `example` arguments (matched by name) and return a
+    dictionary with at least a `key` and a `score` key with a numerical value.
 
     Here is an example evaluator:
     ```
-    from langsmith.schemas import Example, Run
-
-    def length_evaluator(run: Run, example: Example) -> dict:
-        score = 0 if len(run.outputs["llm_output"]) < 50 else 1.
-        return {"score": score}
+    def length_evaluator(outputs: dict) -> dict:
+        score = 0 if len(outputs["llm_output"]) < 50 else 1.
+        return {"key": "length", "score": score}
     ```
 
     Refer to LangSmith's documentation for more information on how to create evaluators.
@@ -41,8 +37,8 @@ class Evaluation(ABC):
     name: str
     agents: list[Agent]
     datasets: list[Dataset]
-    langsmith_api_key: Optional[str] = None
-    evaluators: list[Callable | LangChainStringEvaluator] | None = None
+    langsmith_api_key: str | None = None
+    evaluators: list[Callable] | None = None
     additional_arguments: dict = {}
     additional_inputs: dict = {}
     metadata: dict = {"version": "1.0.0", "revision_id": "beta"}
@@ -90,5 +86,3 @@ class Evaluation(ABC):
 
 class EvaluationError(Exception):
     """Exception raised for errors that occur during the evaluation process."""
-
-    pass

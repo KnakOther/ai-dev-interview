@@ -1,11 +1,16 @@
-from typing import Any
+from typing import Any, cast
 
-from langchain_google_vertexai import ChatVertexAI
+from langchain.agents import create_agent
+from langchain.agents.middleware import InputAgentState
+from langchain.agents.structured_output import ProviderStrategy
 from pydantic import BaseModel, Field
 
-from src.agents.classify_document.classify_document_prompt import prompt_template
+from src.agents.classify_document.classify_document_prompt import (
+    custom_categories_instruction,
+    prompt_template,
+)
 from src.shared.agent import Agent, AgentResponse
-from src.shared.gemini import GEMINI_CONFIG
+from src.shared.gemini import get_chat_model
 
 
 class DocumentClassification(BaseModel):
@@ -33,7 +38,7 @@ class ClassifyDocumentAgentInput(BaseModel):
 class ClassifyDocumentAgent(Agent):
     def __init__(self) -> None:
         self.name = "Classify document agent"
-        self.model = "gemini-2.5-flash"
+        self.model = "gemini-3.5-flash"
         self.input_schema = ClassifyDocumentAgentInput
 
     def generate_response(
@@ -42,17 +47,29 @@ class ClassifyDocumentAgent(Agent):
         *args: Any,
         **kwargs: Any,
     ) -> AgentResponse:
-        chat = ChatVertexAI(model=self.model, **GEMINI_CONFIG).with_structured_output(
-            schema=DocumentClassification, include_raw=True
+        agent = create_agent(
+            model=get_chat_model(self.model),
+            tools=[],
+            response_format=ProviderStrategy(schema=DocumentClassification),
+            name="classify_document",
         )
         _input = input.copy()
 
         if not _input.get("custom_categories"):
             _input["custom_categories"] = []
 
-        llm_output = (prompt_template | chat).invoke(_input)
+        _input["custom_categories_instruction"] = custom_categories_instruction(
+            _input["custom_categories"]
+        )
 
-        raw_output, parsed_output = self.unpack_llm_structured_output(llm_output)
+        agent_result = agent.invoke(
+            cast(
+                InputAgentState,
+                {"messages": prompt_template.format_messages(**_input)},
+            )
+        )
+
+        parsed_output, usage_metadata = self.unpack_agent_result(agent_result)
 
         if not isinstance(parsed_output, DocumentClassification):
             raise ValueError(
@@ -62,4 +79,4 @@ class ClassifyDocumentAgent(Agent):
         if len(parsed_output.primary_category) == 0:
             raise ValueError("Primary category cannot be empty.")
 
-        return AgentResponse(parsed_output.model_dump(), raw_output.usage_metadata)
+        return AgentResponse(parsed_output.model_dump(), usage_metadata)

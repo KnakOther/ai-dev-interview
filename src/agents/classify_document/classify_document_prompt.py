@@ -29,10 +29,11 @@ Guidelines:
             "Please classify the following document:\n\n{document_text}",
         ),
     ]
-).partial(
-    custom_categories_instruction=lambda x: (
-        f"Please prioritize these custom categories if relevant: {', '.join(x['custom_categories'])}"
-        if x.get("custom_categories")
-        else ""
-    )
 )
+
+
+def custom_categories_instruction(custom_categories: list[str]) -> str:
+    if not custom_categories:
+        return ""
+
+    return f"Please prioritize these custom categories if relevant: {', '.join(custom_categories)}"
